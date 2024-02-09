@@ -31,6 +31,7 @@ import pytz
 import uuid
 import urllib
 import dateutil.relativedelta
+import logging
 
 # Define a function that converts a datetime string to UTC format
 def to_utc_format(dt_str):
@@ -62,8 +63,11 @@ def authorize(user: str, password: str, api_key: str) -> str:
     }
     try:
         response = requests.post(url, headers=headers, json=body, timeout=60)
+        logging.debug(url)
+        logging.debug(response.status_code)
+        logging.debug(response.content)
     except Exception as e:
-        print(e)
+        logging.error(e)
         return 0
         
     r = json.loads(response.content)
@@ -83,8 +87,11 @@ def get_bookings(otp: str, api_key: str, months_in_future:int = 6):
         }
     try:
         response = requests.get(url, headers=headers, timeout=60)
+        logging.debug(url)
+        logging.debug(response.status_code)
+        logging.debug(response.content)
     except Exception as e:
-        print(e)
+        logging.error(e)
         return 
     bookings = json.loads(response.content)
     for booking in bookings:
@@ -96,7 +103,14 @@ def get_bookings(otp: str, api_key: str, months_in_future:int = 6):
                 "Content-Type": "application/json",
                 "Authorization": f"Basic {otp}"
             }
-        response = requests.get(url, headers=headers, timeout=60)
+        try:
+            response = requests.get(url, headers=headers, timeout=60)
+            logging.debug(url)
+            logging.debug(response.status_code)
+            logging.debug(response.content)
+        except Exception as e:
+            logging.error(e)
+            return
         bookee = json.loads(response.content)
         booking.update({"vehicle": bookee["name"]})
         
@@ -108,7 +122,14 @@ def get_bookings(otp: str, api_key: str, months_in_future:int = 6):
                 "Content-Type": "application/json",
                 "Authorization": f"Basic {otp}"
             }
-        response = requests.get(url, headers=headers, timeout=60)
+        try:
+            response = requests.get(url, headers=headers, timeout=60)
+            logging.debug(url)
+            logging.debug(response.status_code)
+            logging.debug(response.content)
+        except Exception as e:
+            logging.error(e)
+            return
         bookee = json.loads(response.content)
         booking.update({"location": bookee["name"]})    
     return bookings
@@ -140,11 +161,9 @@ def cantamen_to_ical():
     otp = authorize(user, pwd, api_key)
     boookings = get_bookings(otp, api_key)
     cal = generate_calendar(boookings)
-    #with open("calendar.ics", "wb") as f:
-    #    f.write(cal.to_ical())
     ical_str = cal.to_ical()
     return Response(ical_str, mimetype="text/calendar")
 
 if __name__ == "__main__":
-    #main()
+    logging.basicConfig(level=logging.DEBUG)
     app.run()

@@ -20,7 +20,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. """
 
-from flask import Flask, Response
+from flask import Flask, Response, request
 import requests
 import os
 import json
@@ -157,8 +157,16 @@ app = Flask(__name__)
 
 @app.route("/cantamen_to_ical")
 def cantamen_to_ical():
-    user = os.environ.get("CANTAMEN_USER")
-    pwd = os.environ.get("CANTAMEN_PWD")
+    # We want a base64 encoded username not just to be safe with URL parameters but also to be safe it is an allowed environment variable name
+    user_base64 = request.args.get('user')
+    if not user_base64:
+        logging.warn("No user parameter provided")
+        return Response(status = 401)
+    pwd = os.environ.get("CANTAMEN_PWD_"+user_base64, None)
+    if not pwd:
+        logging.warn("Password for user %s not found in environment variables", user_base64)
+        return Response(status = 401)
+    user = base64.urlsafe_b64decode(user_base64).decode()
     api_key = os.environ.get("CANTAMEN_API_KEY")
     otp = authorize(user, pwd, api_key)
     boookings = get_bookings(otp, api_key)

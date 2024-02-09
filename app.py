@@ -95,43 +95,44 @@ def get_bookings(otp: str, api_key: str, months_in_future:int = 6):
         return 
     bookings = json.loads(response.content)
     for booking in bookings:
-        url = "https://de1.cantamen.de/casirest/v3/bookeeproducts/"+booking["bookeeId"]+"?expand=bookeeTypeId"
-        headers = {
-                "Accept": "application/json",
-                "X-API-Key": api_key,
-                "Idempotency-Key": str(uuid.uuid4()),
-                "Content-Type": "application/json",
-                "Authorization": f"Basic {otp}"
-            }
-        try:
-            response = requests.get(url, headers=headers, timeout=60)
-            logging.debug(url)
-            logging.debug(response.status_code)
-            logging.debug(response.content)
-        except Exception as e:
-            logging.error(e)
-            return
-        bookee = json.loads(response.content)
-        booking.update({"vehicle": bookee["name"]})
-        
-        url = "https://de1.cantamen.de/casirest/v3/bookees/"+booking["bookeeId"]+"?expand=placeId"
-        headers = {
-                "Accept": "application/json",
-                "X-API-Key": api_key,
-                "Idempotency-Key": str(uuid.uuid4()),
-                "Content-Type": "application/json",
-                "Authorization": f"Basic {otp}"
-            }
-        try:
-            response = requests.get(url, headers=headers, timeout=60)
-            logging.debug(url)
-            logging.debug(response.status_code)
-            logging.debug(response.content)
-        except Exception as e:
-            logging.error(e)
-            return
-        bookee = json.loads(response.content)
-        booking.update({"location": bookee["name"]})    
+        if booking["cancelled"] != True:
+            url = "https://de1.cantamen.de/casirest/v3/bookeeproducts/"+booking["bookeeId"]+"?expand=bookeeTypeId"
+            headers = {
+                    "Accept": "application/json",
+                    "X-API-Key": api_key,
+                    "Idempotency-Key": str(uuid.uuid4()),
+                    "Content-Type": "application/json",
+                    "Authorization": f"Basic {otp}"
+                }
+            try:
+                response = requests.get(url, headers=headers, timeout=60)
+                logging.debug(url)
+                logging.debug(response.status_code)
+                logging.debug(response.content)
+            except Exception as e:
+                logging.error(e)
+                return
+            bookee = json.loads(response.content)
+            booking.update({"vehicle": bookee["name"]})
+            
+            url = "https://de1.cantamen.de/casirest/v3/bookees/"+booking["bookeeId"]+"?expand=placeId"
+            headers = {
+                    "Accept": "application/json",
+                    "X-API-Key": api_key,
+                    "Idempotency-Key": str(uuid.uuid4()),
+                    "Content-Type": "application/json",
+                    "Authorization": f"Basic {otp}"
+                }
+            try:
+                response = requests.get(url, headers=headers, timeout=60)
+                logging.debug(url)
+                logging.debug(response.status_code)
+                logging.debug(response.content)
+            except Exception as e:
+                logging.error(e)
+                return
+            bookee = json.loads(response.content)
+            booking.update({"location": bookee["name"]})    
     return bookings
 
 
@@ -140,13 +141,14 @@ def generate_calendar(bookings):
     cal.add("prodid", "-//Copilot//icalendar 4.0.3//EN")
     cal.add("version", "2.0")
     for booking in bookings:
-        event = icalendar.Event()
-        event.add("uid", booking["id"])
-        event.add("summary", booking["vehicle"])
-        event.add("location", booking["location"])
-        event.add("dtstart", icalendar.vDatetime.from_ical(to_utc_format(booking["timeRange"]["start"])))
-        event.add("dtend", icalendar.vDatetime.from_ical(to_utc_format(booking["timeRange"]["end"])))
-        cal.add_component(event)
+        if booking["cancelled"] != True:
+            event = icalendar.Event()
+            event.add("uid", booking["id"])
+            event.add("summary", booking["vehicle"])
+            event.add("location", booking["location"])
+            event.add("dtstart", icalendar.vDatetime.from_ical(to_utc_format(booking["timeRange"]["start"])))
+            event.add("dtend", icalendar.vDatetime.from_ical(to_utc_format(booking["timeRange"]["end"])))
+            cal.add_component(event)
     return cal
     
 
@@ -162,6 +164,7 @@ def cantamen_to_ical():
     boookings = get_bookings(otp, api_key)
     cal = generate_calendar(boookings)
     ical_str = cal.to_ical()
+    logging.debug(ical_str)
     return Response(ical_str, mimetype="text/calendar")
 
 if __name__ == "__main__":

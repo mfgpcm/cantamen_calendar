@@ -1,0 +1,4 @@
+fly.toml
+__pycache__
+venv
+Procfile
